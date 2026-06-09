@@ -1,0 +1,111 @@
+# OpenTelemetry Collector — local / docker-compose pipeline
+# Receives OTLP, exports to Prometheus, Loki, and Tempo
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: otel-collector
+          scrape_interval: 15s
+          static_configs:
+            - targets: ["0.0.0.0:8888"]
+
+processors:
+  batch:
+    timeout: 5s
+    send_batch_size: 1024
+    send_batch_max_size: 2048
+
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+    spike_limit_mib: 128
+
+  resource:
+    attributes:
+      - key: deployment.environment
+        value: ${env:DEPLOYMENT_ENVIRONMENT}
+        action: upsert
+      - key: service.namespace
+        value: observability
+        action: upsert
+
+  attributes:
+    actions:
+      - key: loki.attribute.labels
+        value: service.name,service.namespace,deployment.environment
+        action: insert
+
+  transform/logs:
+    log_statements:
+      - context: log
+        statements:
+          - set(attributes["loki.attribute.labels"], Concat([attributes["service.name"], attributes["deployment.environment"]], ","))
+
+exporters:
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    const_labels:
+      collector: otel
+
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+    sending_queue:
+      enabled: true
+      num_consumers: 4
+      queue_size: 1000
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+
+  loki:
+    endpoint: http://loki:3100/loki/api/v1/push
+    tls:
+      insecure: true
+    default_labels_enabled:
+      exporter: true
+      job: true
+      instance: true
+      level: true
+
+  debug:
+    verbosity: basic
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+  pprof:
+    endpoint: 0.0.0.0:1777
+  zpages:
+    endpoint: 0.0.0.0:55679
+
+service:
+  extensions: [health_check, pprof, zpages]
+  telemetry:
+    logs:
+      level: ${env:OTEL_LOG_LEVEL}
+    metrics:
+      address: 0.0.0.0:8888
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, resource]
+      exporters: [otlp/tempo]
+    metrics:
+      receivers: [otlp, prometheus]
+      processors: [memory_limiter, batch, resource]
+      exporters: [prometheus]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, resource, attributes, transform/logs]
+      exporters: [loki]

@@ -1,0 +1,66 @@
+apiVersion: 1
+
+deleteDatasources:
+  - name: Prometheus
+    orgId: 1
+  - name: Loki
+    orgId: 1
+  - name: Tempo
+    orgId: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+    jsonData:
+      timeInterval: 15s
+      exemplarTraceIdDestinations:
+        - name: traceID
+          datasourceUid: tempo
+          urlDisplayLabel: View Trace
+
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    editable: false
+    jsonData:
+      maxLines: 1000
+      derivedFields:
+        - datasourceUid: tempo
+          matcherRegex: '(?:trace_id|traceID|traceId)["=: ]+([a-f0-9]{32}|[a-f0-9]{16})'
+          name: TraceID
+          url: '$${__value.raw}'
+          urlDisplayLabel: View Trace
+
+  - name: Tempo
+    type: tempo
+    uid: tempo
+    access: proxy
+    url: http://tempo:3200
+    editable: false
+    jsonData:
+      httpMethod: GET
+      tracesToLogs:
+        datasourceUid: loki
+        filterByTraceID: true
+        filterBySpanID: false
+        mapTagNamesEnabled: true
+        tags: [service.name, k8s.pod.name]
+      tracesToMetrics:
+        datasourceUid: prometheus
+        tags: [{ key: service.name, value: service_name }]
+        queries:
+          - name: Request rate
+            query: sum(rate(http_server_request_duration_seconds_count{service_name="$${__tags}"}[5m]))
+          - name: Error rate
+            query: sum(rate(http_server_request_duration_seconds_count{service_name="$${__tags}",http_response_status_code=~"5.."}[5m]))
+      serviceMap:
+        datasourceUid: prometheus
+      nodeGraph:
+        enabled: true
+      lokiSearch:
+        datasourceUid: loki

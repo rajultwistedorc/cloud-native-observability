@@ -1,0 +1,76 @@
+groups:
+  - name: observability-stack
+    rules:
+      - alert: PrometheusTargetDown
+        expr: up == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Target {{ $labels.job }}/{{ $labels.instance }} is down"
+          description: "Prometheus cannot scrape {{ $labels.instance }} for more than 5 minutes."
+
+      - alert: OtelCollectorDown
+        expr: up{job="otel-collector"} == 0
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "OpenTelemetry Collector is down"
+          description: "OTel collector metrics endpoint is unreachable."
+
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~"5.."}[5m])) by (service_name)
+          /
+          sum(rate(http_server_request_duration_seconds_count[5m])) by (service_name)
+          > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High 5xx error rate on {{ $labels.service_name }}"
+          description: "More than 5% of requests are returning 5xx errors."
+
+      - alert: HighP99Latency
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le, service_name)
+          ) > 2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High P99 latency on {{ $labels.service_name }}"
+          description: "P99 request latency exceeds 2 seconds."
+
+      - alert: LokiIngesterDown
+        expr: up{job="loki"} == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Loki is down"
+          description: "Log aggregation is unavailable."
+
+      - alert: TempoIngesterDown
+        expr: up{job="tempo"} == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Tempo is down"
+          description: "Distributed tracing backend is unavailable."
+
+      - alert: PrometheusDiskSpaceLow
+        expr: |
+          (
+            prometheus_tsdb_storage_blocks_bytes
+            / prometheus_tsdb_retention_limit_bytes
+          ) > 0.85
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prometheus storage nearing retention limit"
+          description: "TSDB storage is above 85% of configured retention."

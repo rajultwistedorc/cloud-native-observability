@@ -1,0 +1,82 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "graphTooltip": 1,
+  "id": null,
+  "panels": [
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
+      "id": 1,
+      "title": "Request Rate (RPS)",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "sum(rate(http_server_request_duration_seconds_count[5m])) by (service_name)", "legendFormat": "{{service_name}}" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
+      "id": 2,
+      "title": "Error Rate",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "service:http_error_ratio:rate5m", "legendFormat": "{{service_name}}" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
+      "id": 3,
+      "title": "Latency P95",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "service:http_latency:p95", "legendFormat": "{{service_name}}" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "id": 4,
+      "title": "Latency Percentiles",
+      "type": "timeseries",
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "targets": [
+        { "expr": "service:http_latency:p50", "legendFormat": "p50 {{service_name}}" },
+        { "expr": "service:http_latency:p95", "legendFormat": "p95 {{service_name}}" },
+        { "expr": "service:http_latency:p99", "legendFormat": "p99 {{service_name}}" }
+      ]
+    },
+    {
+      "datasource": { "type": "tempo", "uid": "tempo" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "id": 5,
+      "title": "Service Map",
+      "type": "nodeGraph",
+      "targets": [
+        { "queryType": "serviceMap", "serviceMapQuery": "{service_name=~\".+\"}" }
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["golden-signals", "sre"],
+  "templating": {
+    "list": [
+      {
+        "name": "service",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "query": "label_values(http_server_request_duration_seconds_count, service_name)",
+        "includeAll": true,
+        "multi": true
+      }
+    ]
+  },
+  "time": { "from": "now-1h", "to": "now" },
+  "title": "Golden Signals (RED)",
+  "uid": "golden-signals",
+  "version": 1
+}

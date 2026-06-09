@@ -1,0 +1,60 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percentunit" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 0 },
+      "id": 1,
+      "title": "Stack Health",
+      "type": "stat",
+      "targets": [
+        { "expr": "avg(up{job=~\"prometheus|otel-collector|loki|tempo|grafana\"})", "legendFormat": "uptime" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 9, "x": 6, "y": 0 },
+      "id": 2,
+      "title": "OTel Collector — Accepted Spans",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "sum(rate(otelcol_receiver_accepted_spans[5m]))", "legendFormat": "accepted" },
+        { "expr": "sum(rate(otelcol_exporter_sent_spans[5m]))", "legendFormat": "exported" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 9, "x": 15, "y": 0 },
+      "id": 3,
+      "title": "Prometheus Scrape Targets",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "sum(up) by (job)", "legendFormat": "{{job}}" }
+      ]
+    },
+    {
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 8 },
+      "id": 4,
+      "title": "Recent Application Logs",
+      "type": "logs",
+      "targets": [
+        { "expr": "{service=~\".+\"} |= \"\"", "legendFormat": "" }
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["observability", "overview"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "title": "Observability Overview",
+  "uid": "obs-overview",
+  "version": 1
+}

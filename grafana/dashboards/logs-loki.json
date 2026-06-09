@@ -1,0 +1,63 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "graphTooltip": 1,
+  "id": null,
+  "panels": [
+    {
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "title": "Log Volume by Service",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "sum(count_over_time({service=~\"$service\"}[1m])) by (service)", "legendFormat": "{{service}}" }
+      ]
+    },
+    {
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 4 },
+      "id": 2,
+      "title": "Error Log Rate",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "sum(count_over_time({service=~\"$service\"} |~ \"(?i)error|exception|fatal\" [1m])) by (service)", "legendFormat": "{{service}}" }
+      ]
+    },
+    {
+      "datasource": { "type": "loki", "uid": "loki" },
+      "gridPos": { "h": 16, "w": 24, "x": 0, "y": 8 },
+      "id": 3,
+      "title": "Log Stream",
+      "type": "logs",
+      "targets": [
+        { "expr": "{service=~\"$service\"} |~ \"$search\"", "legendFormat": "" }
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["loki", "logs"],
+  "templating": {
+    "list": [
+      {
+        "name": "service",
+        "type": "query",
+        "datasource": { "type": "loki", "uid": "loki" },
+        "query": "label_values(service)",
+        "includeAll": true,
+        "multi": true,
+        "current": { "text": "All", "value": "$__all" }
+      },
+      {
+        "name": "search",
+        "type": "textbox",
+        "current": { "text": "", "value": "" }
+      }
+    ]
+  },
+  "time": { "from": "now-1h", "to": "now" },
+  "title": "Loki Logs Explorer",
+  "uid": "loki-logs",
+  "version": 1
+}

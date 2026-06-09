@@ -1,0 +1,24 @@
+# Reference SDK environment variables for application instrumentation
+# Copy relevant variables into your deployment manifests or .env
+
+otel:
+  service_name: demo-app
+  exporter_otlp_endpoint: http://otel-collector:4318
+  exporter_otlp_protocol: http/protobuf
+  traces_exporter: otlp
+  metrics_exporter: otlp
+  logs_exporter: otlp
+  resource_attributes: deployment.environment=development,service.version=1.0.0
+  python_log_correlation: "true"
+  propagators: tracecontext,baggage
+
+environment_variables:
+  OTEL_SERVICE_NAME: demo-app
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+  OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+  OTEL_TRACES_EXPORTER: otlp
+  OTEL_METRICS_EXPORTER: otlp
+  OTEL_LOGS_EXPORTER: otlp
+  OTEL_RESOURCE_ATTRIBUTES: deployment.environment=development,service.version=1.0.0
+  OTEL_PYTHON_LOG_CORRELATION: "true"
+  OTEL_PROPAGATORS: tracecontext,baggage

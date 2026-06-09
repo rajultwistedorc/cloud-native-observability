@@ -1,0 +1,47 @@
+groups:
+  - name: golden-signals
+    interval: 30s
+    rules:
+      - record: service:http_requests:rate5m
+        expr: sum(rate(http_server_request_duration_seconds_count[5m])) by (service_name, http_route)
+
+      - record: service:http_errors:rate5m
+        expr: |
+          sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~"5.."}[5m]))
+          by (service_name, http_route)
+
+      - record: service:http_error_ratio:rate5m
+        expr: |
+          service:http_errors:rate5m
+          /
+          service:http_requests:rate5m
+
+      - record: service:http_latency:p50
+        expr: |
+          histogram_quantile(0.50,
+            sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le, service_name)
+          )
+
+      - record: service:http_latency:p95
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le, service_name)
+          )
+
+      - record: service:http_latency:p99
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(http_server_request_duration_seconds_bucket[5m])) by (le, service_name)
+          )
+
+  - name: otel-collector
+    interval: 30s
+    rules:
+      - record: otel:receiver_accepted_spans:rate5m
+        expr: sum(rate(otelcol_receiver_accepted_spans[5m])) by (receiver)
+
+      - record: otel:exporter_sent_spans:rate5m
+        expr: sum(rate(otelcol_exporter_sent_spans[5m])) by (exporter)
+
+      - record: otel:processor_dropped_spans:rate5m
+        expr: sum(rate(otelcol_processor_dropped_spans[5m])) by (processor)

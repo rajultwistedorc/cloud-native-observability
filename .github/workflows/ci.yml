@@ -1,0 +1,86 @@
+name: Observability Stack CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: pip install pyyaml ruff
+
+      - name: Lint demo app
+        run: ruff check demo-app/
+
+      - name: Validate docker-compose
+        run: docker compose config
+
+      - name: Validate YAML configs
+        run: |
+          for f in opentelemetry/*.yaml loki/*.yaml tempo/*.yaml prometheus/*.yml grafana/provisioning/**/*.yml; do
+            echo "Checking $f"
+            python -c "import yaml; yaml.safe_load_all(open('$f'))"
+          done
+
+      - name: Install kubeconform
+        run: |
+          wget -qO- https://github.com/yannh/kubeconform/releases/download/v0.6.4/kubeconform-linux-amd64.tar.gz | tar xz
+          sudo mv kubeconform /usr/local/bin/
+
+      - name: Validate Kubernetes manifests
+        run: |
+          kubectl kustomize kubernetes/ > /tmp/rendered.yaml
+          kubeconform -strict -summary /tmp/rendered.yaml
+          kubectl apply --dry-run=client -k kubernetes/
+
+      - name: Validate Grafana dashboards JSON
+        run: |
+          for f in grafana/dashboards/*.json; do
+            echo "Checking $f"
+            python -c "import json; json.load(open('$f'))"
+          done
+
+  build-demo-app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build demo app image
+        run: docker build -t demo-app:ci demo-app/
+
+      - name: Smoke test demo app
+        run: |
+          docker run -d --name demo-app -p 8080:8080 \
+            -e OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 \
+            demo-app:ci
+          sleep 5
+          curl -fsS http://localhost:8080/health
+          docker rm -f demo-app
+
+  integration:
+    runs-on: ubuntu-latest
+    needs: [validate, build-demo-app]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start observability stack
+        run: |
+          cp .env.example .env
+          docker compose up -d
+          sleep 30
+
+      - name: Health check
+        run: bash scripts/health-check.sh
+
+      - name: Generate traffic
+        run: bash scripts/generate-traffic.sh
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
