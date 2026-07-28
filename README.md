@@ -174,13 +174,3 @@ make port-forward  # Access K8s services locally
 ## License
 
 MIT
-
-## Live Screenshots
-
-### Grafana with Loki and Tempo
-![Grafana Observability](screenshots/grafana-observability.png)
-
-## Live Screenshots
-
-### Grafana with Loki and Tempo
-![Grafana Observability](screenshots/grafana-observability.png)
