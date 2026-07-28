@@ -179,3 +179,8 @@ MIT
 
 ### Grafana with Loki and Tempo
 ![Grafana Observability](screenshots/grafana-observability.png)
+
+## Live Screenshots
+
+### Grafana with Loki and Tempo
+![Grafana Observability](screenshots/grafana-observability.png)
